@@ -346,7 +346,7 @@ void graph_t::eliminate_triangles(vector<size_t>& vertexcover) {
 			iter++;
 		}
 	}
-	cout << "eliminate triangles: " << sum << endl;
+//	cout << "eliminate triangles: " << sum << endl;
 //	cout << edge_size << " " << edges.size() << endl;
 	/*node_size = nodes.size();
 	edge_size = edges.size();
@@ -389,6 +389,74 @@ void graph_t::coloring(size_t color_1, size_t color_2) {
 	}	
 }
 
+/*
+ * x_i + x_j >= 1.0 for all (i, j) in E
+ * x_i in {0, 0.5, 1}
+ */
+int graph_t::lp_solver() {
+	int vc_size = 0;
+	int m = edge_size;
+	int n = node_size;
+initialize:
+	glp_prob* lp;
+	lp = glp_create_prob();
+	glp_set_obj_dir(lp, GLP_MIN);
+
+auxiliary_variables_rows:
+	glp_add_rows(lp, m);
+	for (int i = 1; i <= m; i++)
+		glp_set_row_bnds(lp, i, GLP_LO, 1.0, 0.0);
+
+variables_columns:
+	glp_add_cols(lp, n);
+	for (int i = 1; i <= n; i++)
+		glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);
+
+to_minimize:
+	for (int i = 1; i <= n; i++)
+		glp_set_obj_coef(lp, i, 1.0);
+
+constrant_matrix:
+	int size = m * n;
+	int* ia = new int[size + 1];
+	int* ja = new int[size + 1];
+	double* ar = new double[size + 1];
+	for (int i = 1; i <= m; i++) {
+		edge_t* edge = edges[i - 1];
+		for (int j = 1; j <= n; j++) {
+			int k = (i - 1) * n + j;
+			ia[k] = i;
+			ja[k] = j;
+			if (j - 1 == edge->u || j - 1 == edge->v)
+				ar[k] = 1.0;
+			else
+				ar[k] = 0.0;
+		}
+	}
+	glp_load_matrix(lp, size, ia, ja, ar);
+
+calculate:
+	glp_simplex(lp, NULL);
+	// glp_exact(lp, NULL);
+
+output:
+	// cout << glp_get_obj_val(lp) << endl;
+	for (int i = 1; i <= n; i++) {
+		// cout << glp_get_col_prim(lp, i) << endl;
+		if (glp_get_col_prim(lp, i) >= .5) {
+			vc_size++;
+			// cout << i - 1 << " ";
+			// cout << graph.get_node(i - 1).edges.size() << endl;
+			// graph.get_node(i - 1).show();
+		}
+	}
+
+cleanup:
+	glp_delete_prob(lp);
+
+	return vc_size;
+}
+
 
 size_t forests_t::most_color() {
 	unordered_map<size_t, size_t> counts;
@@ -403,13 +471,13 @@ size_t forests_t::most_color() {
 	unordered_map<size_t, size_t>::iterator iter = counts.begin();
 	size_t max = 0, color = 0;
 	for (; iter != counts.end(); iter++) {
-		cout << iter->first << "," << iter->second << endl;
+		// cout << iter->first << "," << iter->second << endl;
 		if (iter->second > max) {
 			max = iter->second;
 			color = iter->first;
 		}
 	}
-	cout << color << "," << max << endl;
+	// cout << color << "," << max << endl;
 	return color;
 }
 
@@ -488,7 +556,7 @@ calculate:
 	// glp_exact(lp, NULL);
 
 output:
-	cout << glp_get_obj_val(lp) << endl;
+	// cout << glp_get_obj_val(lp) << endl;
 	for (int i = 1; i <= n; i++) {
 		sum_graph.set_lp(i, glp_get_col_prim(lp, i));
 	}

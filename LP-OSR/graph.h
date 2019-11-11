@@ -233,6 +233,8 @@ public:
 	void append_edges(vector<edge_t*> append_edges) {
 		edges.insert(edges.end(), append_edges.begin(), append_edges.end());
 	}
+
+	int lp_solver();
 };
 
 class forests_t {

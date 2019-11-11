@@ -1,0 +1,17 @@
+CC = g++
+
+CFLAGS = -std=c++11
+
+EXP = experiment
+OBJ = util.o graph.o experiment_1.o
+
+experiment: $(OBJ)
+	$(CC) $(CFLAGS) -o $(EXP) $(OBJ)
+
+%.o: $.cpp
+	$(CC) $(CFLAGS) -c $< -o $@
+
+graph.o: util.h graph.h graph.cpp
+
+clean:
+	rm *.o $(EXP)
