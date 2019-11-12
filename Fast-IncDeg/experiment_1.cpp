@@ -13,21 +13,25 @@ int main() {
 	string data_path = "data.db";
 	string bpt_id_path = "bpt_id.db";
 	string bpt_q_path = "bpt_q.db";
+	string log_path = "time.log";
+	string result_path = "result1.csv";
+
+	clock_t start, end;
+	time_t now;
+	double duration;
+
+	ofstream outLog;
+	outLog.open(log_path, ios::app | ios::out);
+
+	ofstream outFile;
+	outFile.open(result_path, ios::app | ios::out);
 
 	Generator generator;
 	generator.load_rawdata();
 
-	for (double rho = 0.01; rho <= 0.1; rho += 0.01) {
-		string log_path = "./logs/time_" + to_string(rho) + ".log";
-		string result_path = "./results_1/result_" + to_string(rho) + ".csv";
-		for (int i = 1; i <= 10; i++) {
-			size_t number = i * 1000000; // 1M -> 10M
-
-			clock_t start, end;
-			time_t now;
-			double duration;
-			ofstream outLog;
-			outLog.open(log_path, ios::app | ios::out);
+	for (int i = 1; i <= 10; i++) {
+		size_t number = i * 1000000; // 1M -> 10M
+		for (double rho = 0.01; rho <= 0.1; rho += 0.01) {
 			outLog << "\nexperiment with " << number << " tuples\n";
 
 			now = time(0);
@@ -71,11 +75,6 @@ int main() {
 				<< ", max degree: " << graph.get_max_degree()
 				<< ", min degree: " << graph.get_min_degree() << endl;
 
-			ofstream outFile;
-			outFile.open(result_path, ios::app | ios::out);
-			now = time(0);
-			outLog << ctime(&now) << "start experiment with " << i << "M tuples\n";
-
 			size_t sample_threshold = 4 * epsilon * epsilon;
 
 			double sum = 0, sum_online = 0, min = 100000, max = 0, min_online = 100000, max_online = 0;
@@ -83,7 +82,7 @@ int main() {
 			for (size_t i = 0; i < round; ++i) {
 				// cout << i << endl;
 				double left = (rand() % number / 4) / 10;
-				double right =  left + number / (10 * (rand() % 3 + 2)); // number / 10 - (rand() % number / 4) / 10;
+				double right = left + number / (10 * (rand() % 3 + 2)); // number / 10 - (rand() % number / 4) / 10;
 				if (sizeof(data_t) == sizeof(dblp_t)) {
 					left = (rand() % number / 4);
 					right = left + number / (rand() % 3 + 2);
@@ -128,17 +127,19 @@ int main() {
 				if (duration > max_online_sp) max_online_sp = duration;
 				if (duration < min_online_sp) min_online_sp = duration;
 			}
-			outFile << number << ","
-				<< sum / round << "," << sum_online / round << "," << sum_sp / round << "," << sum_online_sp / round  << ","
+			outFile << number << "," << rho << ","
+				<< sum / round << "," << sum_online / round << "," << sum_sp / round << "," << sum_online_sp / round << ","
 				<< max << "," << max_online << "," << max_sp << "," << max_online_sp << ","
 				<< min << "," << min_online << "," << min_sp << "," << min_online_sp << endl;
-
-			outFile.close();
-			now = time(0);
-			outLog << ctime(&now) << "complete experiments.\n";
-			outLog.close();
 		}
+		now = time(0);
+		outLog << ctime(&now) << "complete experiments.\n";
 	}
+
+	outFile.close();
+
+	outLog.close();
+
 
 	return 0;
 }

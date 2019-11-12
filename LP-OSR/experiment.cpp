@@ -1,5 +1,6 @@
 #include "graph.h"
 #include "util.h"
+#include "lpmvc.h"
 #include <ctime>
 
 int main() {
@@ -8,9 +9,7 @@ int main() {
 	string data_path = "data.db";
 	string result_path = "result.csv";
 
-	vector<size_t> epsilons;
-	epsilons.push_back(100);
-	// epsilons.push_back(1000);
+	size_t epsilon = 100;
 
 	Generator generator;
 	generator.load_rawdata();
@@ -18,11 +17,10 @@ int main() {
 	ofstream outCsv;
 	outCsv.open(result_path, ios::app | ios::out);
 
-	for (double rho = 0.01; rho <= 0.1; rho += 0.01) {
+	for (int i = 1; i <= 10; i++) {
+		size_t number = i * 100000; // 10k -> 1000k
 
-		for (int i = 1; i <= 10; i++) {
-			size_t number = i * 1000; // 10k -> 1000k
-		
+		for (double rho = 0.01; rho <= 0.1; rho += 0.01) {
 			generator.gen_data(data_path.c_str(), number, rho);
 
 			graph_t graph(data_path.c_str(), number, rho);
@@ -32,7 +30,7 @@ int main() {
 			graph_t graph_2(data_path.c_str(), number, rho, is_conflict_fd2);
 			graph_t graph_3(data_path.c_str(), number, rho, is_conflict_fd3);
 			// graph_t graph_4(data_path.c_str(), number, rho, is_conflict_fd4);
-	
+
 			forests_t forests(sum_graph);
 			forests.add_graph(graph_1);
 			forests.add_graph(graph_2);
@@ -44,31 +42,25 @@ int main() {
 			//	<< graph.get_max_degree() << ","
 			//	<< graph.get_min_degree() << endl;
 
-			size_t vc_lp = 0, vc_lp2 = 0;
+			size_t vc_lp = 0, vc_lp2 = 0, vc = 0, vc_online = 0;
 
 			vc_lp = graph.lp_solver();
 
 			vc_lp2 = forests.vertexcover();
 
-			for (size_t epsilon : epsilons) {
+			size_t sample_threshold = 4 * epsilon * epsilon;
 
-				size_t vc = 0, vc_online = 0;
+			for (int i = 0; i < 10; i++) {
+				vc += graph.vertexcover(sample_threshold);
 
-				size_t sample_threshold = 2 * epsilon * epsilon;
-
-				for (int i = 0; i < 10; i++) {
-					vc += graph.vertexcover(sample_threshold);
-
-					vc_online += graph.vertexcover_online(sample_threshold);
-				}
-
-				outCsv << rho << "," << number << ","
-					<< vc_lp << "," << vc_lp2 << "," << vc / 10 << "," << vc_online / 10 << endl;
+				vc_online += graph.vertexcover_online(sample_threshold);
 			}
-			
 
+			outCsv << rho << "," << number << ","
+				<< vc_lp << "," << vc_lp2 << "," << vc / 10 << "," << vc_online / 10 << endl;
 		}
 	}
+
 	outCsv.close();
 	return 0;
 }
