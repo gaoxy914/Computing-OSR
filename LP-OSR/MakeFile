@@ -1,17 +1,18 @@
 CC = g++
-
-CFLAGS = -std=c++11
+INCLUDE = -I/home/gaoxiangyu/BigData_gaoxiagnyu/glpk/include
+CFLAGS = -std=c++11 -lglpk
 
 EXP = experiment
-OBJ = util.o graph.o experiment_1.o
+OBJ = util.o graph.o experiment.o
 
 experiment: $(OBJ)
-	$(CC) $(CFLAGS) -o $(EXP) $(OBJ)
-
-%.o: $.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -o $(EXP) $(OBJ) $(INCLUDE)
 
 graph.o: util.h graph.h graph.cpp
+	$(CC) $(CFLAGS) -c graph.cpp $(INCLUDE)
+
+util.o: util.h util.cpp
+	$(CC) $(CFLAGS) -c util.h
 
 clean:
 	rm *.o $(EXP)
