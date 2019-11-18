@@ -31,7 +31,7 @@ int main() {
 	double duration;
 
 	for (int i = 1; i <= 10; i++) {
-		size_t number = i * 1000; // 1M -> 10M
+		size_t number = i * 1000000; // 1M -> 10M
 
 		outLog << "\nexperiment with " << number << " tuples\n";
 
