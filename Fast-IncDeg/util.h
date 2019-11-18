@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -34,15 +33,15 @@ struct order_t {
 	char zip[16];
 
 	void print() {
-		cout << id << ","
-			<< key << ","
-			<< area_code << ","
-			<< phone_number << ","
-			<< street << ","
-			<< country << ","
-			<< city << ","
-			<< state << ","
-			<< zip << endl;
+		cout << id << "\n";
+		//	<< key << ","
+		//	<< area_code << ","
+		//	<< phone_number << ","
+		//	<< street << ","
+		//	<< country << ","
+		//	<< city << ","
+		//	<< state << ","
+		//	<< zip << endl;
 	}
 };
 

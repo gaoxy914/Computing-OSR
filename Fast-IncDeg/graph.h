@@ -126,7 +126,7 @@ class graph_t {
 	}
 
 public:
-	graph_t(const char* path, const size_t& number,
+	graph_t(const char* path, const size_t& number, const double& rho,
 		bool (*is_conflict)(const data_t&, const data_t&) = is_conflict);
 
 	size_t get_node_size() const {

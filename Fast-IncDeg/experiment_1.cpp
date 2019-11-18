@@ -37,7 +37,7 @@ int main() {
 			now = time(0);
 			outLog << ctime(&now) << "start to generate data.\n";
 			start = clock();
-			generator.gen_data(data_path.c_str(), number, rho);
+			// generator.gen_data(data_path.c_str(), number, rho);
 			end = clock();
 			duration = (double)(end - start) / CLOCKS_PER_SEC;
 			cout << "time consumption of data generation: " << duration << "s." << endl;
@@ -63,7 +63,7 @@ int main() {
 			now = time(0);
 			outLog << ctime(&now) << "start to build graph.\n";
 			start = clock();
-			graph_t graph(data_path.c_str(), number);
+			graph_t graph(data_path.c_str(), number, rho);
 			end = clock();
 			duration = (double)(end - start) / CLOCKS_PER_SEC;
 			cout << "time consumption of building graph: " << duration << "s." << endl;
@@ -137,7 +137,7 @@ int main() {
 	}
 
 	outFile.close();
-
+	
 	outLog.close();
 
 
