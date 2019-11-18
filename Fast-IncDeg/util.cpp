@@ -59,7 +59,7 @@ bool is_conflict(const dblp_t& dblp1, const dblp_t& dblp2) {
 	return false;
 }
 
-bool is_conflict_fd1(const order_t& order1, const order_t& order2) {
+bool is_conflict_bd(const order_t& order1, const order_t& order2) {
 	if (!strcmp(order1.area_code, order2.area_code)
 		&& !strcmp(order1.phone_number, order2.phone_number))
 		if (strcmp(order1.street, order2.street) || strcmp(order1.city, order2.city)
@@ -71,7 +71,7 @@ bool is_conflict_fd1(const order_t& order1, const order_t& order2) {
 	return false;
 }
 
-bool is_conflict_fd2(const dblp_t& dblp1, const dblp_t& dblp2) {
+bool is_conflict_bd(const dblp_t& dblp1, const dblp_t& dblp2) {
 	if (!strcmp(dblp1.ee, dblp2.ee))
 		if (strcmp(dblp1.title, dblp2.title))
 			return true;
@@ -98,11 +98,11 @@ int read_data(const char* path, const off_t& offset, const size_t& max, data_t* 
 inline void load_file(const char* path, vector<string>& vec) {
 	ifstream inFile(path, ios::in);
 	string line;
-	int i = 0;
-	while (getline(inFile, line) && i < 2000) {
+//	int i = 0;
+	while (getline(inFile, line)) {
 		if (line.length() != 0) {
 			vec.push_back(line);
-			i++;
+//			i++;
 		}
 	}
 	inFile.close();

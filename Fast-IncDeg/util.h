@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -82,8 +83,8 @@ typedef order_t data_t;
 bool is_conflict(const order_t& order1, const order_t& order2);
 bool is_conflict(const dblp_t& dblp1, const dblp_t& dblp2);
 
-bool is_conflict_fd1(const order_t& order1, const order_t& order2);
-bool is_conflict_fd2(const dblp_t& dblp1, const dblp_t& dblp2);
+bool is_conflict_bd(const order_t& order1, const order_t& order2);
+bool is_conflict_bd(const dblp_t& dblp1, const dblp_t& dblp2);
 
 int read_data(const char* path, const off_t& offset, const size_t& max, data_t* datas);
 

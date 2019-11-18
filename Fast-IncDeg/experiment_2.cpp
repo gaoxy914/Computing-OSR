@@ -67,7 +67,7 @@ int main() {
 				now = time(0);
 				outLog << ctime(&now) << "start to build graph.\n";
 				start = clock();
-				graph_t graph(data_path.c_str(), number, rho, is_conflict_fd1);
+				graph_t graph(data_path.c_str(), number, rho, is_conflict_bd);
 				end = clock();
 				duration = (double)(end - start) / CLOCKS_PER_SEC;
 				cout << "time consumption of building graph: " << duration << "s." << endl;
