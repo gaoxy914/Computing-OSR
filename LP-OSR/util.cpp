@@ -92,6 +92,17 @@ bool is_conflict_fd2(const order_t& order1, const order_t& order2) {
 }
 
 bool is_conflict_fd3(const order_t& order1, const order_t& order2) {
+	if (order1.id == order2.id)
+		if (order1.key != order2.key ||
+			strcmp(order1.name, order2.name)) {
+			// cout << "id -> name, pr" << endl;
+			return true;
+		}
+
+	return false;
+}
+
+bool is_conflict_fd4(const order_t& order1, const order_t& order2) {
 	if (!strcmp(order1.city, order2.city)
 		&& !strcmp(order1.street, order2.street))
 		if (strcmp(order1.zip, order2.zip)) {

@@ -123,39 +123,237 @@ void graph_t::del_triangle(const size_t& u, const size_t& v, const size_t& w) {
 	}
 }
 
-bool graph_t::uncolored_neighbor(const size_t& u) {
-	vector<edge_t> edges = nodes[u]->edges;
-	for (int i = 0; i < edges.size(); i++) {
-		if (nodes[edges[i].v]->color == -1)
-			return true;
-	}
-	return false;
-}
-void graph_t::color_node(node_t* node, const size_t& color_1, const size_t& color_2) {
-	vector<node_t*> nodes_1, nodes_2;
-	nodes_1.push_back(node);
-	while (nodes_1.size() > 0) {
-		for (int i = 0; i < nodes_1.size(); i++) {
-			nodes_1[i]->color = color_1;
-			vector<edge_t> edges = nodes_1[i]->edges;
-			for (int j = 0; j < edges.size(); j++)
-				if (nodes[edges[j].v]->color == -1)
-					nodes_2.push_back(nodes[edges[j].v]);
+void graph_t::coloring() {
+	size_t color = 0;
+	bool done = false;
+	while (!done) {
+		done = true;
+		for (int i = 0; i < node_size; i++) {
+			if (nodes[i]->color == -1) {
+				nodes[i]->color = color;
+				vector<edge_t> edges = nodes[i]->edges;
+				for (int j = 0; j < edges.size(); j++) {
+					if (nodes[edges[j].v]->color == color) {
+						nodes[i]->color = -1;
+						done = false;
+						break;
+					}
+				}
+			}
 		}
-		for (int i = 0; i < nodes_2.size(); i++) {
-			nodes_2[i]->color = color_2;
-			vector<edge_t> edges = nodes_2[i]->edges;
-			for (int j = 0; j < edges.size(); j++)
-				if (nodes[edges[j].v]->color == -1)
-					nodes_1.push_back(nodes[edges[j].v]);
+		color++;
+	}
+
+	// cout << color << endl;
+}
+
+size_t graph_t::most_color()
+{
+	unordered_map<size_t, size_t> counts;
+	for (size_t i = 0; i < node_size; i++) {
+		//	cout << sum_graph.get_color(i) << endl;
+		if (nodes[i]->lp == 0.5)
+			if (counts.count(nodes[i]->color) == 0)
+				counts[nodes[i]->color] = 1;
+			else
+				counts[nodes[i]->color] += 1;
+	}
+	unordered_map<size_t, size_t>::iterator iter = counts.begin();
+	size_t max = 0, color = 0;
+	for (; iter != counts.end(); iter++) {
+		// cout << iter->first << "," << iter->second << endl;
+		if (iter->second > max) {
+			max = iter->second;
+			color = iter->first;
 		}
 	}
+	// cout << color << "," << max << endl;
+	return color;
 }
+
+/*
+ * x_i + x_j >= 1.0 for all (i, j) in E
+ * x_i in {0, 0.5, 1}
+ */
+void graph_t::lp_solver() {
+	int m = edges.size();
+	int n = nodes.size();
+initialize:
+	glp_prob* lp;
+	lp = glp_create_prob();
+	glp_set_obj_dir(lp, GLP_MIN);
+
+auxiliary_variables_rows:
+	glp_add_rows(lp, m);
+	for (int i = 1; i <= m; i++)
+		glp_set_row_bnds(lp, i, GLP_LO, 1.0, 0.0);
+
+variables_columns:
+	glp_add_cols(lp, n);
+	for (int i = 1; i <= n; i++)
+		glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);
+
+to_minimize:
+	for (int i = 1; i <= n; i++)
+		glp_set_obj_coef(lp, i, 1.0);
+
+constrant_matrix:
+	int size = m * n;
+	int* ia = new int[size + 1];
+	int* ja = new int[size + 1];
+	double* ar = new double[size + 1];
+	for (int i = 1; i <= m; i++) {
+		edge_t* edge = edges[i - 1];
+		for (int j = 1; j <= n; j++) {
+			int k = (i - 1) * n + j;
+			ia[k] = i;
+			ja[k] = j;
+			if (j - 1 == edge->u || j - 1 == edge->v)
+				ar[k] = 1.0;
+			else
+				ar[k] = 0.0;
+		}
+	}
+	glp_load_matrix(lp, size, ia, ja, ar);
+
+calculate:
+	glp_simplex(lp, NULL);
+	// glp_exact(lp, NULL);
+
+output:
+	// cout << glp_get_obj_val(lp) << endl;
+	for (int i = 1; i <= n; i++) {
+		nodes[i - 1]->lp = glp_get_col_prim(lp, i);
+	}
+
+cleanup:
+	glp_delete_prob(lp);
+}
+
+/*
+ * x_i + x_j >= 1.0 for all (i, j) in E
+ * x_i in {0, 0.5, 1}
+ * sum(x_i) > |p| - max|pq| - epsilon
+ */
+void graph_t::k_quasi_lp_solver(const int& k, const double& epsilon) {
+	int m = edges.size() + k_quasi_count;
+	int n = nodes.size();
+initialize:
+	glp_prob* lp;
+	lp = glp_create_prob();
+	glp_set_obj_dir(lp, GLP_MIN);
+
+auxiliary_variables_rows:
+	glp_add_rows(lp, m);
+	int i = 1;
+	for ( ; i <= edges.size(); i++)
+		glp_set_row_bnds(lp, i, GLP_LO, 1.0, 0.0);
+	unordered_map<string, equivalence_t>::iterator iter = eq_classes.begin();
+	for (; iter != eq_classes.end() && i <= m; iter++) {
+		if (iter->second.k_quasi) {
+			int ita = iter->second.max_depeq_size();
+			double l_b = iter->second.size() - ita - epsilon;
+			glp_set_row_bnds(lp, i++, GLP_LO, l_b, 0.0);
+		}
+	}
+
+variables_columns:
+	glp_add_cols(lp, n);
+	for (int i = 1; i <= n; i++)
+		glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);
+
+to_minimize:
+	for (int i = 1; i <= n; i++)
+		glp_set_obj_coef(lp, i, 1.0);
+
+constrant_matrix:
+	int size = m * n;
+	int* ia = new int[size + 1];
+	int* ja = new int[size + 1];
+	double* ar = new double[size + 1];
+	i = 1;
+	for ( ; i <= edges.size(); i++) {
+		edge_t* edge = edges[i - 1];
+		for (int j = 1; j <= n; j++) {
+			int k = (i - 1) * n + j;
+			ia[k] = i;
+			ja[k] = j;
+			if (j - 1 == edge->u || j - 1 == edge->v)
+				ar[k] = 1.0;
+			else
+				ar[k] = 0.0;
+		}
+	}
+	iter = eq_classes.begin();
+	for (; iter != eq_classes.end() && i <= m; iter++) {
+		if (iter->second.k_quasi) {
+			vector<size_t> nodes;
+			iter->second.get_nodes(nodes);
+			for (int j = 1; j <= n; j++) {
+				int k = (i - 1) * n + j;
+				ia[k] = i;
+				ja[k] = j;
+				if (find(nodes.begin(), nodes.end(), j - 1) != nodes.end())
+					ar[k] = 1.0;
+				else
+					ar[k] = 0.0;
+			}
+		}
+	}
+	glp_load_matrix(lp, size, ia, ja, ar);
+
+calculate:
+	glp_simplex(lp, NULL);
+	// glp_exact(lp, NULL);
+
+output:
+	// cout << glp_get_obj_val(lp) << endl;
+	for (int i = 1; i <= n; i++) {
+		nodes[i - 1]->lp = glp_get_col_prim(lp, i);
+	}
+
+cleanup:
+	glp_delete_prob(lp);
+}
+
+void graph_t::set_k_quasi(int k) {
+	
+	unordered_map<string, equivalence_t>::iterator iter = eq_classes.begin();
+	for (; iter != eq_classes.end(); iter++) {
+		equivalence_t eq = iter->second;
+
+		// cout << eq.dep_eq.size() << endl;
+
+		if (eq.dep_eq.size() > 2) {
+			bool satisfied = true;
 			
+			unordered_map<string, vector<size_t> >::iterator iter2 = eq.dep_eq.begin();
+			for (; iter2 != eq.dep_eq.end(); iter2++)
+				if (eq.size() - iter2->second.size() < k * iter2->second.size())
+					satisfied = false;
+			// cout << satisfied << endl;
+
+			if (satisfied) {
+				eq.k_quasi = true;
+				k_quasi_count++;
+				iter2 = eq.dep_eq.begin();
+				for (; iter2 != eq.dep_eq.end(); iter2++) {
+					vector<size_t> pq = iter2->second;
+					for (int i = 0; i < pq.size(); i++)
+						nodes[i]->k_quasi = 1;
+				}
+			}
+		}	
+	}
+	// for (int i = 0; i < nodes.size(); i++) {
+	//	if (nodes[i]->k_quasi == 1)
+	//		cout << nodes[i]->node_id << endl;
+	//}
+}
 
 graph_t::graph_t(const size_t& number) {
 	node_size = number;
-	min_degree = edge_size = max_degree = 0;
+	min_degree = edge_size = max_degree = k_quasi_count = 0;
 	for (size_t node_id = 0; node_id < number; ++node_id)
 		add_node(node_id);
 }
@@ -170,7 +368,7 @@ graph_t::graph_t(const char* path, const size_t& number,
 	unsigned int seed = (unsigned int)time(NULL);
 	RandomSequenceOfUnique rsu(seed, seed + 1);
 	node_size = min_degree = number;
-	edge_size = max_degree = 0;
+	edge_size = max_degree = k_quasi_count = 0;
 
 	for (size_t node_id = 0; node_id < number; ++node_id)
 		add_node(node_id);
@@ -217,15 +415,18 @@ graph_t::graph_t(const char* path, const size_t& number,
 		int size_l = read_data(path, offset_l, DATA_BATCH, datas_l);
 		// end = clock();
 		// sum += (double)(end - start) / CLOCKS_PER_SEC;
-		for (int p = 0; p < size_l; p++)
+		for (int p = 0; p < size_l; p++) {
+
 			for (int q = p + 1; q < size_l; q++)
 				if (is_conflict(datas_l[p], datas_l[q])) {
 					// cout << datas_l[p].id << " " << datas_l[q].id << endl;
 					// datas_l[p].print();
 					// datas_l[q].print();
 					add_edge(datas_l[p].id, datas_l[q].id, edge_size++, rsu.next());
+					add_eqclass(datas_l[p], datas_l[q]);
 				}
 
+		}
 
 		for (size_t j = i + 1; j < round; j++) {
 			// start = clock();
@@ -239,6 +440,7 @@ graph_t::graph_t(const char* path, const size_t& number,
 						// datas_l[p].print();
 						// datas_r[q].print();
 						add_edge(datas_l[p].id, datas_r[q].id, edge_size++, rsu.next());
+						add_eqclass(datas_l[p], datas_r[q]);
 					}
 
 			offset_r += sizeof(data_t) * DATA_BATCH;
@@ -325,7 +527,6 @@ int graph_t::vertexcover_online(const size_t& sample_threshold) {
 	return vc_size * node_size / sample_threshold;
 }
 
-
 void graph_t::eliminate_triangles(vector<size_t>& vertexcover) {
 	vector<edge_t*>::iterator iter = edges.begin();
 	size_t sum = 0;
@@ -389,74 +590,52 @@ void graph_t::coloring(size_t color_1, size_t color_2) {
 	}	
 }
 
-/*
- * x_i + x_j >= 1.0 for all (i, j) in E
- * x_i in {0, 0.5, 1}
- */
-int graph_t::lp_solver() {
-	int vc_size = 0;
-	int m = edge_size;
-	int n = node_size;
-initialize:
-	glp_prob* lp;
-	lp = glp_create_prob();
-	glp_set_obj_dir(lp, GLP_MIN);
+int graph_t::vertexcover_bllp() {
+	coloring();
+	lp_solver();
+	size_t color = most_color();
+	int vc = 0;
+	for (int i = 0; i < node_size; i++)
+		if ((nodes[i]->lp == 0.5 && nodes[i]->color != color) ||
+			nodes[i]->lp == 1)
+			vc++;
 
-auxiliary_variables_rows:
-	glp_add_rows(lp, m);
-	for (int i = 1; i <= m; i++)
-		glp_set_row_bnds(lp, i, GLP_LO, 1.0, 0.0);
-
-variables_columns:
-	glp_add_cols(lp, n);
-	for (int i = 1; i <= n; i++)
-		glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);
-
-to_minimize:
-	for (int i = 1; i <= n; i++)
-		glp_set_obj_coef(lp, i, 1.0);
-
-constrant_matrix:
-	int size = m * n;
-	int* ia = new int[size + 1];
-	int* ja = new int[size + 1];
-	double* ar = new double[size + 1];
-	for (int i = 1; i <= m; i++) {
-		edge_t* edge = edges[i - 1];
-		for (int j = 1; j <= n; j++) {
-			int k = (i - 1) * n + j;
-			ia[k] = i;
-			ja[k] = j;
-			if (j - 1 == edge->u || j - 1 == edge->v)
-				ar[k] = 1.0;
-			else
-				ar[k] = 0.0;
-		}
-	}
-	glp_load_matrix(lp, size, ia, ja, ar);
-
-calculate:
-	glp_simplex(lp, NULL);
-	// glp_exact(lp, NULL);
-
-output:
-	// cout << glp_get_obj_val(lp) << endl;
-	for (int i = 1; i <= n; i++) {
-		// cout << glp_get_col_prim(lp, i) << endl;
-		if (glp_get_col_prim(lp, i) >= .5) {
-			vc_size++;
-			// cout << i - 1 << " ";
-			// cout << graph.get_node(i - 1).edges.size() << endl;
-			// graph.get_node(i - 1).show();
-		}
-	}
-
-cleanup:
-	glp_delete_prob(lp);
-
-	return vc_size;
+	return vc;
 }
 
+int graph_t::vertexcover_telp() {
+	vector<size_t> vc;
+	eliminate_triangles(vc);
+	coloring();
+	lp_solver();
+	size_t color = most_color();
+	for (int i = 0; i < node_size; i++)
+		if ((nodes[i]->lp == 0.5 && nodes[i]->color != color) ||
+			nodes[i]->lp == 1)
+			vc.push_back(i);
+
+	sort(vc.begin(), vc.end());
+	vc.erase(unique(vc.begin(), vc.end()), vc.end());
+	return vc.size();
+}
+
+int graph_t::vertexcover_qtlp(const int& k, const double& epislon) {
+	set_k_quasi(k);
+	k_quasi_lp_solver(k, epislon);
+	int vc = 0;
+	for (int i = 0; i < node_size; i++)
+		if (nodes[i]->lp == 0.5 ||	nodes[i]->lp == 1)
+			vc++;
+
+	return vc;
+}
+
+void graph_t::reset() {
+	for (int i = 0; i < node_size; i++) {
+		nodes[i]->color = -1;
+		nodes[i]->lp = -1;
+	}
+}
 
 size_t forests_t::most_color() {
 	unordered_map<size_t, size_t> counts;

@@ -11,7 +11,7 @@ OBJ2 = bplus_tree.o graph.o  oracle.o util.o experiment_2.o
 all: $(EXP1) $(EXP2)
 
 clean:
-	rm *.o $(EXP1) $(EXP2)
+	rm *.o *.db $(EXP1) $(EXP2)
 
 experiment_1: $(OBJ1)
 	$(CC) $(CFLAGS) -o $(EXP1) $(OBJ1)

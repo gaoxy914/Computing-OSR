@@ -33,8 +33,10 @@ public:
 
 	size_t color;
 	double lp;
+	int k_quasi;
 
-	node_t(size_t node_id, size_t color = -1, double lp = -1) : node_id(node_id), color(color), lp(lp) { }
+	node_t(size_t node_id, size_t color = -1, double lp = -1, int k_quasi = 0) 
+		: node_id(node_id), color(color), lp(lp), k_quasi(k_quasi) { }
 
 	void add_edge(size_t v, size_t edge_id, size_t ranking) {
 		edges.push_back(edge_t(node_id, v, edge_id, ranking));
@@ -98,11 +100,60 @@ public:
 	}
 };
 
+class equivalence_t {
+public:
+	bool k_quasi;
+	unordered_map<string, vector<size_t> > dep_eq;
+
+	equivalence_t() : k_quasi(false) { }
+
+	void add_tuple(string rhs, size_t node_id) {
+		dep_eq[rhs].push_back(node_id);
+	}
+
+	int size() {
+		int size = 0;
+		unordered_map<string, vector<size_t> >::iterator iter = dep_eq.begin();
+		for (; iter != dep_eq.end(); iter++)
+			size += iter->second.size();
+		return size;
+	}
+	
+	int max_depeq_size() {
+		int max_size = 0;
+		unordered_map<string, vector<size_t> >::iterator iter = dep_eq.begin();
+		for (; iter != dep_eq.end(); iter++)
+			if (iter->second.size() > max_size)
+				max_size = iter->second.size();
+		return max_size;
+	}
+
+	void get_nodes(vector<size_t>& nodes) {
+		unordered_map<string, vector<size_t> >::iterator iter = dep_eq.begin();
+		for (; iter != dep_eq.end(); iter++)
+			nodes.insert(nodes.end(), iter->second.begin(), iter->second.end());
+
+		sort(nodes.begin(), nodes.end());
+		nodes.erase(unique(nodes.begin(), nodes.end()), nodes.end());
+	}
+
+	void show() {
+		unordered_map<string, vector<size_t> >::iterator iter = dep_eq.begin();
+		for (; iter != dep_eq.end(); iter++) {
+			cout << "rhs: "<< iter->first << ": ";
+			for (int i = 0; i < iter->second.size(); i++)
+				cout << iter->second[i] << ", ";
+			cout << endl;
+		}
+	}
+};
+
 class graph_t {
 	size_t node_size;
 	size_t edge_size;
 	size_t max_degree;
 	size_t min_degree;
+	size_t k_quasi_count;
 
 	vector<node_t*> nodes;
 	vector<edge_t*> edges;
@@ -112,6 +163,8 @@ class graph_t {
 	unordered_map<size_t, bool> matching;
 	// unordered_map<size_t, bool> vertex_cover;
 
+	unordered_map<string, equivalence_t> eq_classes;
+
 	void add_node(const size_t& node_id) {
 		nodes.push_back(new node_t(node_id));
 	}
@@ -120,6 +173,29 @@ class graph_t {
 		nodes[u]->add_edge(v, edge_id, ranking);
 		nodes[v]->add_edge(u, edge_id, ranking);
 		edges.push_back(new edge_t(u, v, edge_id, ranking));
+	}
+
+	void add_eqclass(const data_t& data1, const data_t& data2) {
+		if (is_conflict_fd1(data1, data2)) {
+			eq_classes[data1.lhs_fd1()].add_tuple(data1.rhs_fd1(), data1.id);
+			eq_classes[data2.lhs_fd1()].add_tuple(data2.rhs_fd1(), data2.id);
+		}
+		
+		if (is_conflict_fd2(data1, data2)) {
+			eq_classes[data1.lhs_fd2()].add_tuple(data1.rhs_fd2(), data1.id);
+			eq_classes[data2.lhs_fd2()].add_tuple(data2.rhs_fd2(), data2.id);
+
+		}
+		
+		if (is_conflict_fd3(data1, data2)) {
+			eq_classes[data1.lhs_fd3()].add_tuple(data1.rhs_fd3(), data1.id);
+			eq_classes[data2.lhs_fd3()].add_tuple(data2.rhs_fd3(), data2.id);
+		}
+		
+		if (is_conflict_fd4(data1, data2)) {
+			eq_classes[data1.lhs_fd4()].add_tuple(data1.rhs_fd4(), data1.id);
+			eq_classes[data2.lhs_fd4()].add_tuple(data2.rhs_fd4(), data2.id);
+		}
 	}
 
 	double random(double lb, double next_lb) {
@@ -147,13 +223,20 @@ class graph_t {
 
 	void del_triangle(const size_t& u, const size_t& v, const size_t& w);
 
-	bool uncolored_neighbor(const size_t& u);
+	/* greedy graph coloring */
+	void coloring();
 
-	void color_node(node_t* node, const size_t& color_1, const size_t& color_2);
+	size_t most_color();
+
+	void lp_solver();
+
+	void k_quasi_lp_solver(const int& k, const double& epsilon);
+
+	void set_k_quasi(int k);
 
 public:
 
-	graph_t() : node_size(0), edge_size(), max_degree(0), min_degree(0) { }
+	graph_t() : node_size(0), edge_size(), max_degree(0), min_degree(0), k_quasi_count(0) { }
 
 	graph_t(const size_t& number);
 
@@ -219,6 +302,11 @@ public:
 		//	nodes[i]->show();
 		// for (int i = 0; i < edges.size(); i++)
 		//	cout << edges[i]->u << " " << edges[i]->v << endl;
+		// unordered_map<string, equivalence_t>::iterator iter = eq_classes.begin();
+		// for (; iter != eq_classes.end(); iter++) {
+		//	cout << "lhs:" << iter->first << ":\n";
+		//	iter->second.show();
+		//}
 	}
 
 	int vertexcover(const size_t& sample_threshold);
@@ -234,7 +322,13 @@ public:
 		edges.insert(edges.end(), append_edges.begin(), append_edges.end());
 	}
 
-	int lp_solver();
+	int vertexcover_bllp();
+
+	int vertexcover_telp();
+
+	int vertexcover_qtlp(const int& k, const double& epislon);
+
+	void reset();
 };
 
 class forests_t {

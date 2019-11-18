@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -33,7 +32,7 @@ struct order_t {
 	char state[32];
 	char zip[16];
 
-	void print() {
+	void print() const {
 		cout << id << ","
 			<< key << ","
 			<< area_code << ","
@@ -44,13 +43,45 @@ struct order_t {
 			<< state << ","
 			<< zip << endl;
 	}
+
+	string lhs_fd1() const {
+		return (string)area_code + (string)phone_number;
+	}
+
+	string rhs_fd1() const {
+		return (string)street + (string)city + (string)state;
+	}
+
+	string lhs_fd2() const {
+		return zip;
+	}
+
+	string rhs_fd2() const {
+		return (string)city + (string)state;
+	}
+
+	string lhs_fd3() const {
+		return to_string(id);
+	}
+
+	string rhs_fd3() const {
+		return (string)name + to_string(key);
+	}
+
+	string lhs_fd4() const {
+		return (string)city + (string)street;
+	}
+
+	string rhs_fd4() const {
+		return zip;
+	}
 };
 
 
 /*
  * title -> authors
  * ee -> title
- * year, publication, pages -> title
+ * year, publication, pages -> title, ee, url
  * url -> title
  */
 struct dblp_t {
@@ -65,7 +96,7 @@ struct dblp_t {
 	char ee[600];
 	char url[100];
 
-	void print() {
+	void print() const {
 		cout << id << ","
 			<< key << ","
 			<< title << ","
@@ -76,9 +107,41 @@ struct dblp_t {
 			<< ee << ","
 			<< url << endl;
 	}
+
+	string lhs_fd1() const {
+		return title;
+	}
+
+	string rhs_fd1() const {
+		return authors;
+	}
+
+	string lhs_fd2() const {
+		return ee;
+	}
+
+	string rhs_fd2() const {
+		return title;
+	}
+
+	string lhs_fd3() const {
+		return (string)year + (string)publication + (string)pages;
+	}
+
+	string rhs_fd3() const {
+		return (string)title + (string)ee + (string)url;
+	}
+
+	string lhs_fd4() const {
+		return url;
+	}
+
+	string rhs_fd4() const {
+		return title;
+	}
 };
 
-typedef order_t data_t;
+typedef dblp_t data_t;
 
 int read_data(const char* path, const off_t& offset, const size_t& max, data_t* datas);
 
@@ -88,6 +151,7 @@ bool is_conflict(const dblp_t& dblp1, const dblp_t& dblp2);
 bool is_conflict_fd1(const order_t& data_l, const order_t& data_r);
 bool is_conflict_fd2(const order_t& data_l, const order_t& data_r);
 bool is_conflict_fd3(const order_t& data_l, const order_t& data_r);
+bool is_conflict_fd4(const order_t& data_l, const order_t& data_r);
 
 bool is_conflict_fd1(const dblp_t& dblp1, const dblp_t& dblp2);
 bool is_conflict_fd2(const dblp_t& dblp1, const dblp_t& dblp2);

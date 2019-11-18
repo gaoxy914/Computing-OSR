@@ -1,6 +1,5 @@
 #include "graph.h"
 #include "util.h"
-#include "lpmvc.h"
 #include <ctime>
 
 int main() {
@@ -17,36 +16,30 @@ int main() {
 	ofstream outCsv;
 	outCsv.open(result_path, ios::app | ios::out);
 
-	for (int i = 1; i <= 10; i++) {
-		size_t number = i * 100000; // 10k -> 1000k
+	for (int i = 10; i <= 40; i += 5) {
+		size_t number = i * 1000; // 10k -> 40k
 
 		for (double rho = 0.01; rho <= 0.1; rho += 0.01) {
 			generator.gen_data(data_path.c_str(), number, rho);
 
 			graph_t graph(data_path.c_str(), number, rho);
 
-			graph_t sum_graph(number);
-			graph_t graph_1(data_path.c_str(), number, rho, is_conflict_fd1);
-			graph_t graph_2(data_path.c_str(), number, rho, is_conflict_fd2);
-			graph_t graph_3(data_path.c_str(), number, rho, is_conflict_fd3);
-			// graph_t graph_4(data_path.c_str(), number, rho, is_conflict_fd4);
-
-			forests_t forests(sum_graph);
-			forests.add_graph(graph_1);
-			forests.add_graph(graph_2);
-			forests.add_graph(graph_3);
-			// forests.add_graph(graph_4);
-
 			// outCsv << graph.get_node_size() << ","
 			//	<< graph.get_edge_size() << ","
 			//	<< graph.get_max_degree() << ","
 			//	<< graph.get_min_degree() << endl;
 
-			size_t vc_lp = 0, vc_lp2 = 0, vc = 0, vc_online = 0;
+			size_t vc_bllp = 0, vc_telp = 0, vc_qtlp = 0, vc = 0, vc_online = 0;
 
-			vc_lp = graph.lp_solver();
+			vc_bllp = graph.vertexcover_bllp();
+			
+			graph.reset();
 
-			vc_lp2 = forests.vertexcover();
+			vc_telp = graph.vertexcover_telp();
+
+			graph.reset();
+
+			vc_qtlp = graph.vertexcover_qtlp(2, 0.3);
 
 			size_t sample_threshold = 4 * epsilon * epsilon;
 
@@ -57,7 +50,8 @@ int main() {
 			}
 
 			outCsv << rho << "," << number << ","
-				<< vc_lp << "," << vc_lp2 << "," << vc / 10 << "," << vc_online / 10 << endl;
+				<< vc_bllp << "," << vc_telp << ","  << vc_qtlp << "," 
+				<< vc / 10 << "," << vc_online / 10 << endl;
 		}
 	}
 

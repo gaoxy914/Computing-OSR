@@ -14,4 +14,4 @@ util.o: util.h util.cpp
 	$(CC) $(CFLAGS) -c util.cpp
 
 clean:
-	rm *.o $(EXP)
+	rm *.o *.db $(EXP)
