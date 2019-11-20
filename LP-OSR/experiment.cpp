@@ -32,14 +32,6 @@ int main() {
 			size_t vc_bllp = 0, vc_telp = 0, vc_qtlp = 0, vc = 0, vc_online = 0;
 
 			vc_bllp = graph.vertexcover_bllp();
-			
-			graph.reset();
-
-			vc_telp = graph.vertexcover_telp();
-
-			graph.reset();
-
-			vc_qtlp = graph.vertexcover_qtlp(2, 0.3);
 
 			size_t sample_threshold = 4 * epsilon * epsilon;
 
@@ -49,6 +41,14 @@ int main() {
 				vc_online += graph.vertexcover_online(sample_threshold);
 			}
 
+			graph.reset();
+
+			vc_qtlp = graph.vertexcover_qtlp(2, 0.3);
+
+			graph.reset();;
+
+			vc_telp = graph.vertexcover_telp();
+		
 			outCsv << rho << "," << number << ","
 				<< vc_bllp << "," << vc_telp << ","  << vc_qtlp << "," 
 				<< vc / 10 << "," << vc_online / 10 << endl;

@@ -294,8 +294,8 @@ public:
 	pair<size_t, double> get_lowest(int node_id, int k);
 
 	void show() {
-		cout << "node_size: " << node_size
-			<< ", edge_size: " << edge_size
+		cout << "node_size: " << nodes.size()
+			<< ", edge_size: " << edges.size()
 			<< ", max_degree: " << max_degree
 			<< ", min_degree: " << min_degree << endl;
 		// for (int i = 0; i < nodes.size(); i++)

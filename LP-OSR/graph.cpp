@@ -198,7 +198,7 @@ to_minimize:
 		glp_set_obj_coef(lp, i, 1.0);
 
 constrant_matrix:
-	int size = m * n;
+	long long size = m * n;
 	int* ia = new int[size + 1];
 	int* ja = new int[size + 1];
 	double* ar = new double[size + 1];
@@ -227,6 +227,9 @@ output:
 	}
 
 cleanup:
+	delete[] ia;
+	delete[] ja;
+	delete[] ar;
 	glp_delete_prob(lp);
 }
 
@@ -238,6 +241,7 @@ cleanup:
 void graph_t::k_quasi_lp_solver(const int& k, const double& epsilon) {
 	int m = edges.size() + k_quasi_count;
 	int n = nodes.size();
+	// cout << m << "," << n << endl;
 initialize:
 	glp_prob* lp;
 	lp = glp_create_prob();
@@ -267,7 +271,8 @@ to_minimize:
 		glp_set_obj_coef(lp, i, 1.0);
 
 constrant_matrix:
-	int size = m * n;
+	long long size = m * n;
+	// cout << size << endl;
 	int* ia = new int[size + 1];
 	int* ja = new int[size + 1];
 	double* ar = new double[size + 1];
@@ -291,6 +296,7 @@ constrant_matrix:
 			iter->second.get_nodes(nodes);
 			for (int j = 1; j <= n; j++) {
 				int k = (i - 1) * n + j;
+				// cout << k << endl;
 				ia[k] = i;
 				ja[k] = j;
 				if (find(nodes.begin(), nodes.end(), j - 1) != nodes.end())
@@ -298,6 +304,7 @@ constrant_matrix:
 				else
 					ar[k] = 0.0;
 			}
+			i++;
 		}
 	}
 	glp_load_matrix(lp, size, ia, ja, ar);
@@ -313,6 +320,9 @@ output:
 	}
 
 cleanup:
+	delete[] ia;
+	delete[] ja;
+	delete[] ar;
 	glp_delete_prob(lp);
 }
 
@@ -320,7 +330,7 @@ void graph_t::set_k_quasi(int k) {
 	
 	unordered_map<string, equivalence_t>::iterator iter = eq_classes.begin();
 	for (; iter != eq_classes.end(); iter++) {
-		equivalence_t eq = iter->second;
+		equivalence_t& eq = iter->second;
 
 		// cout << eq.dep_eq.size() << endl;
 
@@ -349,6 +359,8 @@ void graph_t::set_k_quasi(int k) {
 	//	if (nodes[i]->k_quasi == 1)
 	//		cout << nodes[i]->node_id << endl;
 	//}
+
+	// cout << "k_q count " << k_quasi_count << endl;
 }
 
 graph_t::graph_t(const size_t& number) {
