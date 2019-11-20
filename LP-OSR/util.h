@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -8,7 +9,7 @@
 #include <cstring>
 
 #define OFFSET_DATA 0
-#define DATA_BATCH 500
+#define DATA_BATCH 200
 
 using namespace std;
 

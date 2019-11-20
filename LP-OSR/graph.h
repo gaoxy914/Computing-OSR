@@ -244,11 +244,11 @@ public:
 		bool (*is_conflict)(const data_t&, const data_t&) = is_conflict);
 
 	size_t get_node_size() const {
-		return node_size;
+		return nodes.size();
 	}
 
 	size_t get_edge_size() const {
-		return edge_size;
+		return edges.size();
 	}
 
 	size_t get_max_degree() const {

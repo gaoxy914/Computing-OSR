@@ -6,13 +6,16 @@ int main() {
 	srand((unsigned int)time(NULL));
 
 	string data_path = "data.db";
-	string result_path = "result.csv";
+	string log_path = "time.log";
+	string result_path = "resultd.csv";
 
 	size_t epsilon = 100;
 
 	Generator generator;
 	generator.load_rawdata();
 
+	ofstream outLog;
+	outLog.open(log_path, ios::app | ios::out);
 	ofstream outCsv;
 	outCsv.open(result_path, ios::app | ios::out);
 
@@ -24,10 +27,10 @@ int main() {
 
 			graph_t graph(data_path.c_str(), number, rho);
 
-			// outCsv << graph.get_node_size() << ","
-			//	<< graph.get_edge_size() << ","
-			//	<< graph.get_max_degree() << ","
-			//	<< graph.get_min_degree() << endl;
+			outLog << "graph infomation: node size: " << graph.get_node_size()
+				<< ", edge size: " << graph.get_edge_size()
+				<< ", max degree: " << graph.get_max_degree()
+				<< ", min degree: " << graph.get_min_degree() << endl;
 
 			size_t vc_bllp = 0, vc_telp = 0, vc_qtlp = 0, vc = 0, vc_online = 0;
 
@@ -56,5 +59,7 @@ int main() {
 	}
 
 	outCsv.close();
+
+
 	return 0;
 }

@@ -420,44 +420,72 @@ graph_t::graph_t(const char* path, const size_t& number,
 
 	data_t datas_l[DATA_BATCH], datas_r[DATA_BATCH];
 	off_t offset_l = OFFSET_DATA, offset_r = OFFSET_DATA + sizeof(data_t) * DATA_BATCH;
-	size_t round = ceil((double)number / DATA_BATCH), cur_node = 0,
-		dirty_round = ceil((double)dirty_number / DATA_BATCH);
+
+	size_t clean = number * (1 - rho);
+	size_t dirty = number - clean;
+	size_t round = ceil((double)number / DATA_BATCH), dirty_round = ceil((double)dirty / DATA_BATCH);
 	for (size_t i = 0; i < round; i++) {
 		//	start = clock();
 		int size_l = read_data(path, offset_l, DATA_BATCH, datas_l);
 		// end = clock();
 		// sum += (double)(end - start) / CLOCKS_PER_SEC;
-		for (int p = 0; p < size_l; p++) {
+		size_t cur_id = datas_l[size_l - 1].id;
+		// cout << "cur_id" << cur_id << endl;
+		if (cur_id < clean) {
+			offset_r = OFFSET_DATA + sizeof(data_t) * clean;
+			for (int j = 0; j < dirty_round; j++) {
+				int size_r = read_data(path, offset_r, DATA_BATCH, datas_r);
+				// end = clock();
+				// sum += (double)(end - start) / CLOCKS_PER_SEC;
+				// cout << size_r << endl;
+				for (int p = 0; p < size_l; p++)
+					for (int q = 0; q < size_r; q++)
+						if (is_conflict(datas_l[p], datas_r[q])) {
+							// datas_l[p].print();
+							// datas_r[q].print();
+							add_edge(datas_l[p].id, datas_r[q].id, edge_size++, rsu.next());
+							add_eqclass(datas_l[p], datas_r[q]);
+							if (edge_size % 10000000 == 0)
+								cout << "processing tuple: " << datas_l[p].id
+								<< ", the number of added edges: " << edge_size / 1000000 << "M." << endl;
+						}
 
-			for (int q = p + 1; q < size_l; q++)
-				if (is_conflict(datas_l[p], datas_l[q])) {
-					// cout << datas_l[p].id << " " << datas_l[q].id << endl;
-					// datas_l[p].print();
-					// datas_l[q].print();
-					add_edge(datas_l[p].id, datas_l[q].id, edge_size++, rsu.next());
-					add_eqclass(datas_l[p], datas_l[q]);
-				}
-
+				offset_r += sizeof(data_t) * DATA_BATCH;
+			}
 		}
-
-		for (size_t j = i + 1; j < round; j++) {
-			// start = clock();
-			int size_r = read_data(path, offset_r, DATA_BATCH, datas_r);
-			// end = clock();
-			// sum += (double)(end - start) / CLOCKS_PER_SEC;
+		else {
 			for (int p = 0; p < size_l; p++)
-				for (int q = 0; q < size_r; q++)
-					if (is_conflict(datas_l[p], datas_r[q])) {
-						// cout << datas_l[p].id << " " << datas_r[q].id << endl;
+				for (int q = p + 1; q < size_l; q++)
+					if (is_conflict(datas_l[p], datas_l[q])) {
 						// datas_l[p].print();
-						// datas_r[q].print();
-						add_edge(datas_l[p].id, datas_r[q].id, edge_size++, rsu.next());
-						add_eqclass(datas_l[p], datas_r[q]);
+						// datas_l[q].print();
+						add_edge(datas_l[p].id, datas_l[q].id, edge_size++, rsu.next());
+						add_eqclass(datas_l[p], datas_l[q]);
+						if (edge_size % 10000000 == 0)
+							cout << "processing tuple: " << datas_l[p].id
+							<< ", the number of added edges: " << edge_size / 1000000 << "M." << endl;
 					}
 
-			offset_r += sizeof(data_t) * DATA_BATCH;
-		}
+			for (size_t j = i + 1; j < round; j++) {
+				// start = clock();
+				int size_r = read_data(path, offset_r, DATA_BATCH, datas_r);
+				// end = clock();
+				// sum += (double)(end - start) / CLOCKS_PER_SEC;
+				for (int p = 0; p < size_l; p++)
+					for (int q = 0; q < size_r; q++)
+						if (is_conflict(datas_l[p], datas_r[q])) {
+							// datas_l[p].print();
+							// datas_r[q].print();
+							add_edge(datas_l[p].id, datas_r[q].id, edge_size++, rsu.next());
+							add_eqclass(datas_l[p], datas_r[q]);
+							if (edge_size % 10000000 == 0)
+								cout << "processing tuple: " << datas_l[p].id
+								<< ", the number of added edges: " << edge_size / 1000000 << "M." << endl;
+						}
 
+				offset_r += sizeof(data_t) * DATA_BATCH;
+			}
+		}
 		offset_l += sizeof(data_t) * DATA_BATCH;
 		offset_r = offset_l + DATA_BATCH * sizeof(data_t);
 	}
