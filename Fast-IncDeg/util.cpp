@@ -111,10 +111,14 @@ inline void load_file(const char* path, vector<string>& vec) {
 void Generator::load_rawdata() {
 	if (sizeof(data_t) == sizeof(order_t)) {
 		load_file("raw_data/US.csv", US);
+		random_shuffle(US.begin(), US.end());
 		load_file("raw_data/booklist.csv", books);
 
-	} else
+	} else {
 		load_file("raw_data/dblp.csv", dblps);
+		random_shuffle(dblps.begin(), dblps.end());
+	}
+		
 }
 
 void Generator::parse(const string& content, vector<string>& tuple) {
